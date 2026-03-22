@@ -27,16 +27,13 @@ export interface IBuyer {
   address: string;
 }
 
-export interface IProductsResponse extends IBuyer {
+export interface IProductsResponse {
   items: IProduct[];
   total: number;
 }
 
-export interface IOrderData {
-  payment: TPayment;
-  email: string;
-  phone: string;
-  address: string;
+export interface IOrderData extends IBuyer {
+  total: number,
   items: string[];
 }
 
