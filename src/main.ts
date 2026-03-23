@@ -32,6 +32,7 @@ console.log(
   "Есть ли конкретная позиция: ",
   cart.isInCart("b06cde61-912f-4663-9751-09956c0eed67"),
 );
+console.log("Общая стоимость товаров в корзине", cart.getTotal());
 cart.clear();
 console.log("Очищенная корзина: ", cart.getItems());
 
