@@ -45,18 +45,28 @@ export class CartView extends Component<{ items: IProduct[]; total: number }> {
     if (this.list) this.list.innerHTML = "";
     this.itemsMap.clear();
 
-    const itemTemplateElement = this.itemTemplate.content.firstElementChild;
-    if (!itemTemplateElement || !(itemTemplateElement instanceof HTMLElement)) {
-      return this.container;
-    }
+    if (data.items.length === 0) {
+      const emptyMessage = document.createElement("p");
+      emptyMessage.className = "basket__empty";
+      emptyMessage.textContent = "Корзина пуста";
+      if (this.list) this.list.appendChild(emptyMessage);
+    } else {
+      const itemTemplateElement = this.itemTemplate.content.firstElementChild;
+      if (
+        !itemTemplateElement ||
+        !(itemTemplateElement instanceof HTMLElement)
+      ) {
+        return this.container;
+      }
 
-    data.items.forEach((item, index) => {
-      const clone = itemTemplateElement.cloneNode(true) as HTMLElement;
-      const cartItem = new CartItem(clone, this.events);
-      cartItem.render({ item, index: index + 1 });
-      if (this.list) this.list.appendChild(cartItem.render());
-      this.itemsMap.set(item.id, cartItem);
-    });
+      data.items.forEach((item, index) => {
+        const clone = itemTemplateElement.cloneNode(true) as HTMLElement;
+        const cartItem = new CartItem(clone, this.events);
+        cartItem.render({ item, index: index + 1 });
+        if (this.list) this.list.appendChild(cartItem.render());
+        this.itemsMap.set(item.id, cartItem);
+      });
+    }
 
     if (this.priceElement) {
       this.updateText(this.priceElement, `${data.total} синапсов`);

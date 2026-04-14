@@ -13,7 +13,6 @@ import { ProductPreview } from "./components/View/ProductPreview";
 import { OrderForm } from "./components/View/OrderForm";
 import { ContactsForm } from "./components/View/ContactsForm";
 import { SuccessView } from "./components/View/SuccessView";
-import { CatalogItem } from "./components/View/CatalogItem";
 import { IProduct, IOrderData, IBuyerValidate } from "./types";
 
 const events = new EventEmitter();
@@ -57,18 +56,20 @@ const cartView = new CartView(basketTemplate, cartItemTemplate, events);
 
 let currentOrderForm: OrderForm | null = null;
 let currentContactsForm: ContactsForm | null = null;
+let currentPreview: ProductPreview | null = null;
 
-/* Test
-
+/*
+// ========== ТЕСТИРОВАНИЕ КОМПОНЕНТОВ ==========
+// Раскомментируй этот блок для тестирования компонентов
+// После проверки закомментируй обратно или удали
 const testProduct: IProduct = {
     id: 'test-1',
     title: 'Тестовый товар',
     description: 'Описание тестового товара',
-    image: './src/images/Subtract.svg',
+    image: 'https://via.placeholder.com/150',
     category: 'софт-скил',
     price: 1000
 };
-
 if (galleryContainer) {
     const testCardContainer = catalogItemTemplate.content.firstElementChild as HTMLElement;
     const testCard = new CatalogItem(testCardContainer, events);
@@ -76,6 +77,7 @@ if (galleryContainer) {
     galleryContainer.replaceChildren(testCard.render());
     console.log('Тест карточки каталога: OK');
 }
+// ========== КОНЕЦ ТЕСТОВОГО БЛОКА ==========
 */
 
 function renderCatalog(): void {
@@ -109,12 +111,10 @@ function openProductPreview(id: string): void {
   if (!product) return;
 
   const previewContainer = productPreviewTemplate.content.firstElementChild;
-  if (!previewContainer || !(previewContainer instanceof HTMLElement)) {
-    console.error("Preview template invalid");
-    return;
-  }
+  if (!previewContainer || !(previewContainer instanceof HTMLElement)) return;
   const clone = previewContainer.cloneNode(true) as HTMLElement;
   const preview = new ProductPreview(clone, events);
+  currentPreview = preview;
   preview.render(product);
 
   const inCart = cart.isInCart(id);
@@ -124,21 +124,17 @@ function openProductPreview(id: string): void {
   modal.open();
 }
 
-function addToCart(id: string): void {
-  const product = catalog.getProductById(id);
-  if (product && product.price !== null) {
-    cart.addItem(product);
-
-    const preview = document.querySelector(".card_full");
-    if (preview) {
-      const button = preview.querySelector(
-        ".card__button",
-      ) as HTMLButtonElement;
-      if (button && !button.disabled) {
-        button.disabled = true;
-        button.textContent = "Уже в корзине";
-      }
+function toggleCartItem(id: string): void {
+  if (cart.isInCart(id)) {
+    cart.removeItem(id);
+  } else {
+    const product = catalog.getProductById(id);
+    if (product && product.price !== null) {
+      cart.addItem(product);
     }
+  }
+  if (currentPreview) {
+    currentPreview.setButtonState(cart.isInCart(id));
   }
 }
 
@@ -246,17 +242,14 @@ function updateFormsValidation(errors: IBuyerValidate): void {
   if (currentOrderForm) {
     const isValid = !errors.payment && !errors.address;
     currentOrderForm.setValid(isValid);
-
     const errorMessages = [];
     if (errors.payment) errorMessages.push(errors.payment);
     if (errors.address) errorMessages.push(errors.address);
     currentOrderForm.showErrors(errorMessages);
   }
-
   if (currentContactsForm) {
     const isValid = !errors.email && !errors.phone;
     currentContactsForm.setValid(isValid);
-
     const errorMessages = [];
     if (errors.email) errorMessages.push(errors.email);
     if (errors.phone) errorMessages.push(errors.phone);
@@ -283,8 +276,8 @@ events.on("catalog:item-selected", (data: { id: string }) => {
   openProductPreview(data.id);
 });
 
-events.on("cart:add", (data: { id: string }) => {
-  addToCart(data.id);
+events.on("cart:toggle", (data: { id: string }) => {
+  toggleCartItem(data.id);
 });
 
 events.on("cart:remove", (data: { id: string }) => {
@@ -326,6 +319,7 @@ events.on("contacts:submit", () => {
 events.on("modal:close", () => {
   currentOrderForm = null;
   currentContactsForm = null;
+  currentPreview = null;
 });
 
 events.on("success:close", () => {

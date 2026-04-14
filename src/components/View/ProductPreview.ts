@@ -26,7 +26,7 @@ export class ProductPreview extends Component<IProduct> {
 
     if (this.button) {
       this.button.addEventListener("click", () => {
-        this.events.emit("cart:add", { id: this.productId });
+        this.events.emit("cart:toggle", { id: this.productId });
       });
     }
   }
@@ -75,17 +75,11 @@ export class ProductPreview extends Component<IProduct> {
     }
   }
 
-  setButtonState(inBasket: boolean): void {
-    if (this.button) {
-      if (inBasket && !this.button.disabled) {
-        this.button.disabled = true;
-        this.button.textContent = "Уже в корзине";
-      } else if (
-        !inBasket &&
-        this.button.disabled &&
-        this.button.textContent === "Уже в корзине"
-      ) {
-        this.button.disabled = false;
+  setButtonState(inCart: boolean): void {
+    if (this.button && this.button.disabled === false) {
+      if (inCart) {
+        this.button.textContent = "Удалить из корзины";
+      } else {
         this.button.textContent = "В корзину";
       }
     }
