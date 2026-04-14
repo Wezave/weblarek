@@ -211,3 +211,208 @@ Presenter - презентер содержит основную логику п
 **Методы:**
 - `getProducts(): Promise<IProductsResponse>` – выполняет GET-запрос к эндпоинту `/product`. Возвращает промис с объектом, содержащим массив товаров.
 - `postOrder(order: IOrderData): Promise<IOrderResponse>` – выполняет POST-запрос к эндпоинту `/order`, передавая данные заказа. Возвращает промис с объектом подтверждения (идентификатор и итоговая сумма).
+
+### Cлой Представления (view)
+
+Классы представления отвечают за отображение интерфейса и взаимодействие с пользователем. Они не хранят данные, а только отображают их и генерируют события о действиях пользователя.
+
+#### Базовые принципы
+
+- Все DOM элементы находятся в конструкторе и сохраняются в поля класса
+- Классы не хранят данные в полях (только DOM элементы)
+- Все слушатели событий устанавливаются один раз в конструкторе
+- Метод `render()` без аргументов возвращает корневой DOM элемент
+- Классы не содержат бизнес-логики
+- О действиях пользователя уведомляют через брокер событий `EventEmitter`
+- Нет геттеров и методов `get...` для получения данных
+
+#### Компоненты представления
+
+**Класс `Modal`** – управление модальным окном.
+
+Конструктор:
+- `constructor(container: HTMLElement, events: EventEmitter)` – принимает корневой элемент модального окна и брокер событий.
+
+Поля:
+- `container: HTMLElement` – корневой элемент модального окна
+- `content: HTMLElement` – контейнер для контента (`.modal__content`)
+- `closeButton: HTMLElement` – кнопка закрытия
+- `events: EventEmitter` – брокер событий
+
+Методы:
+- `open(): void` – открывает модальное окно (добавляет класс `modal_active`)
+- `close(): void` – закрывает модальное окно (удаляет класс `modal_active`)
+- `setContent(content: HTMLElement): void` – устанавливает контент в модальное окно
+- `render(): HTMLElement` – возвращает корневой элемент
+
+Генерируемые события:
+- `modal:open` – при открытии модального окна
+- `modal:close` – при закрытии модального окна
+
+**Класс `CatalogItem`** – карточка товара в каталоге.
+
+Конструктор:
+- `constructor(template: HTMLTemplateElement, events: EventEmitter)` – принимает шаблон карточки и брокер событий.
+
+Поля:
+- `container: HTMLElement` – корневой элемент карточки
+- `category: HTMLElement` – элемент категории
+- `title: HTMLElement` – элемент заголовка
+- `image: HTMLImageElement` – элемент изображения
+- `price: HTMLElement` – элемент цены
+- `events: EventEmitter` – брокер событий
+- `id: string` – идентификатор товара (устанавливается при рендере)
+
+Методы:
+- `setData(data: IProduct): void` – заполняет карточку данными товара
+- `render(data?: IProduct): HTMLElement` – отображает карточку
+- `getElement(): HTMLElement` – возвращает корневой элемент
+
+Генерируемые события:
+- `catalog:item-selected` – при клике на карточку (передаётся `{ id: string }`)
+
+**Класс `CatalogView`** – отображение списка товаров (галерея).
+
+Конструктор:
+- `constructor(container: HTMLElement, events: EventEmitter)` – принимает контейнер для галереи (`.gallery`) и брокер событий.
+
+Поля:
+- `container: HTMLElement` – контейнер галереи
+- `events: EventEmitter` – брокер событий
+- `items: Map<string, CatalogItem>` – карта созданных карточек
+
+Методы:
+- `render(items: IProduct[]): HTMLElement` – отображает список товаров
+- `clear(): void` – очищает галерею
+
+**Класс `ProductPreview`** – детальный просмотр товара.
+
+Конструктор:
+- `constructor(template: HTMLTemplateElement, events: EventEmitter)` – принимает шаблон и брокер событий.
+
+Поля:
+- `container: HTMLElement` – корневой элемент
+- `image: HTMLImageElement` – элемент изображения
+- `category: HTMLElement` – элемент категории
+- `title: HTMLElement` – элемент заголовка
+- `description: HTMLElement` – элемент описания
+- `price: HTMLElement` – элемент цены
+- `button: HTMLButtonElement` – кнопка добавления в корзину
+- `events: EventEmitter` – брокер событий
+- `productId: string` – идентификатор текущего товара
+
+Методы:
+- `setData(data: IProduct): void` – заполняет данными товара
+- `render(data?: IProduct): HTMLElement` – отображает карточку
+- `setButtonState(inBasket: boolean): void` – меняет состояние кнопки
+
+Генерируемые события:
+- `cart:add` – при клике на кнопку добавления в корзину (передаётся `{ id: string }`)
+
+**Класс `CartItem`** – элемент корзины.
+
+Конструктор:
+- `constructor(template: HTMLTemplateElement, events: EventEmitter)` – принимает шаблон и брокер событий.
+
+Поля:
+- `container: HTMLElement` – корневой элемент
+- `index: HTMLElement` – элемент порядкового номера
+- `title: HTMLElement` – элемент заголовка
+- `price: HTMLElement` – элемент цены
+- `deleteButton: HTMLButtonElement` – кнопка удаления
+- `events: EventEmitter` – брокер событий
+- `productId: string` – идентификатор товара
+
+Методы:
+- `setData(data: IProduct, index: number): void` – заполняет данными
+- `render(data?: IProduct, index?: number): HTMLElement` – отображает элемент
+
+Генерируемые события:
+- `cart:remove` – при клике на кнопку удаления (передаётся `{ id: string }`)
+
+**Класс `CartView`** – отображение корзины.
+
+Конструктор:
+- `constructor(template: HTMLTemplateElement, events: EventEmitter)` – принимает шаблон и брокер событий.
+
+Поля:
+- `container: HTMLElement` – корневой элемент
+- `list: HTMLElement` – контейнер для списка товаров (`.basket__list`)
+- `price: HTMLElement` – элемент общей стоимости
+- `button: HTMLButtonElement` – кнопка оформления заказа
+- `events: EventEmitter` – брокер событий
+- `items: Map<string, CartItem>` – карта элементов корзины
+
+Методы:
+- `render(items: IProduct[], total: number): HTMLElement` – отображает корзину
+- `clear(): void` – очищает список
+
+Генерируемые события:
+- `order:start` – при клике на кнопку оформления заказа
+
+**Класс `OrderForm`** – форма заказа (способ оплаты и адрес).
+
+Конструктор:
+- `constructor(template: HTMLTemplateElement, events: EventEmitter)` – принимает шаблон и брокер событий.
+
+Поля:
+- `container: HTMLElement` – корневой элемент формы
+- `cardButton: HTMLButtonElement` – кнопка оплаты картой
+- `cashButton: HTMLButtonElement` – кнопка оплаты наличными
+- `addressInput: HTMLInputElement` – поле ввода адреса
+- `submitButton: HTMLButtonElement` – кнопка отправки
+- `errorsSpan: HTMLElement` – элемент для отображения ошибок
+- `events: EventEmitter` – брокер событий
+
+Методы:
+- `render(data?: { payment?: TPayment; address?: string; errors?: Partial<Record<keyof IBuyer, string>> }): HTMLElement` – отображает форму
+- `setValid(isValid: boolean): void` – устанавливает состояние кнопки
+- `showErrors(errors: string[]): void` – отображает ошибки
+- `clear(): void` – очищает форму
+
+Генерируемые события:
+- `order:payment-select` – при выборе способа оплаты (передаётся `{ payment: TPayment }`)
+- `order:address-change` – при изменении адреса (передаётся `{ address: string }`)
+- `order:submit` – при отправке формы
+
+**Класс `ContactsForm`** – форма контактов (email и телефон).
+
+Конструктор:
+- `constructor(template: HTMLTemplateElement, events: EventEmitter)` – принимает шаблон и брокер событий.
+
+Поля:
+- `container: HTMLElement` – корневой элемент формы
+- `emailInput: HTMLInputElement` – поле ввода email
+- `phoneInput: HTMLInputElement` – поле ввода телефона
+- `submitButton: HTMLButtonElement` – кнопка отправки
+- `errorsSpan: HTMLElement` – элемент для отображения ошибок
+- `events: EventEmitter` – брокер событий
+
+Методы:
+- `render(data?: { email?: string; phone?: string; errors?: Partial<Record<keyof IBuyer, string>> }): HTMLElement` – отображает форму
+- `setValid(isValid: boolean): void` – устанавливает состояние кнопки
+- `showErrors(errors: string[]): void` – отображает ошибки
+- `clear(): void` – очищает форму
+
+Генерируемые события:
+- `contacts:email-change` – при изменении email (передаётся `{ email: string }`)
+- `contacts:phone-change` – при изменении телефона (передаётся `{ phone: string }`)
+- `contacts:submit` – при отправке формы
+
+**Класс `SuccessView`** – окно успешного оформления заказа.
+
+Конструктор:
+- `constructor(template: HTMLTemplateElement, events: EventEmitter)` – принимает шаблон и брокер событий.
+
+Поля:
+- `container: HTMLElement` – корневой элемент
+- `description: HTMLElement` – элемент с описанием (сумма списания)
+- `button: HTMLButtonElement` – кнопка закрытия
+- `events: EventEmitter` – брокер событий
+
+Методы:
+- `render(total: number): HTMLElement` – отображает окно успеха
+- `setTotal(total: number): void` – устанавливает сумму
+
+Генерируемые события:
+- `success:close` – при клике на кнопку закрытия
