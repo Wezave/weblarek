@@ -1,64 +1,330 @@
-import "./scss/styles.scss";
-import { Catalog } from "./components/Models/Catalog";
-import { apiProducts } from "./utils/data";
-import { Api } from "./components/base/Api";
-import { LarekApi } from "./components/LarekApi";
-import { API_URL } from "./utils/constants";
-import { Cart } from "./components/Models/Cart";
-import { Buyer } from "./components/Models/Buyer";
+import './scss/styles.scss';
+import { EventEmitter } from './components/base/Events';
+import { Catalog } from './components/Models/Catalog';
+import { Cart } from './components/Models/Cart';
+import { Buyer } from './components/Models/Buyer';
+import { Api } from './components/base/Api';
+import { LarekApi } from './components/LarekApi';
+import { API_URL } from './utils/constants';
+import { Modal } from './components/View/Modal';
+import { CatalogView } from './components/View/CatalogView';
+import { CartView } from './components/View/CartView';
+import { ProductPreview } from './components/View/ProductPreview';
+import { OrderForm } from './components/View/OrderForm';
+import { ContactsForm } from './components/View/ContactsForm';
+import { SuccessView } from './components/View/SuccessView';
+import { CatalogItem } from './components/View/CatalogItem';
+import { IProduct, IOrderData, IBuyerValidate } from './types';
 
-console.log("===Тестирование каталога===");
-const catalog = new Catalog();
-catalog.setProducts(apiProducts.items);
-console.log("Все товары: ", catalog.getProducts());
-console.log(
-  "Первый товар: ",
-  catalog.getProductById("b06cde61-912f-4663-9751-09956c0eed67"),
-);
-catalog.setSelectedProduct(apiProducts.items[0]);
-console.log("Сохраненный товар: ", catalog.getSelectedProduct());
+const events = new EventEmitter();
 
-console.log("===Тестирование корзины===");
-const cart = new Cart();
-cart.addItem(apiProducts.items[0]);
-console.log("Товары в корзине: ", cart.getItems());
-cart.addItem(apiProducts.items[1]);
-cart.addItem(apiProducts.items[2]);
-console.log("Товары в корзине: ", cart.getItems());
-cart.removeItem("b06cde61-912f-4663-9751-09956c0eed67");
-console.log("Товары в корзине после удаления одной позиции: ", cart.getItems());
-console.log("Позиций в корзине: ", cart.getCount());
-console.log(
-  "Есть ли конкретная позиция: ",
-  cart.isInCart("b06cde61-912f-4663-9751-09956c0eed67"),
-);
-console.log("Общая стоимость товаров в корзине", cart.getTotal());
-cart.clear();
-console.log("Очищенная корзина: ", cart.getItems());
+const catalog = new Catalog(events);
+const cart = new Cart(events);
+const buyer = new Buyer(events);
 
-console.log("===Тестирование оформления покупателя===");
-const buyer = new Buyer();
-buyer.setData({
-  payment: "card",
-  email: "hhh@hh.hh",
-  phone: "+777777",
-  // специально без адреса
-});
-console.log("Данные покупателя: ", buyer.getData());
-console.log("Валидация: ", buyer.validate());
-buyer.clear();
-console.log("Пустые данные: ", buyer.getData());
-
-console.log("API base URL:", API_URL);
 const api = new Api(API_URL);
 const larekApi = new LarekApi(api);
 
-larekApi
-  .getProducts()
-  .then((data) => {
-    catalog.setProducts(data.items);
-    console.log("Каталог: ", catalog.getProducts());
-  })
-  .catch((err) => {
-    console.error("Ошибка загрузки:", err);
-  });
+const modalContainer = document.querySelector('#modal-container') as HTMLElement;
+const galleryContainer = document.querySelector('.gallery') as HTMLElement;
+const catalogItemTemplate = document.querySelector('#card-catalog') as HTMLTemplateElement;
+const productPreviewTemplate = document.querySelector('#card-preview') as HTMLTemplateElement;
+const basketTemplate = document.querySelector('#basket') as HTMLTemplateElement;
+const cartItemTemplate = document.querySelector('#card-basket') as HTMLTemplateElement;
+const orderTemplate = document.querySelector('#order') as HTMLTemplateElement;
+const contactsTemplate = document.querySelector('#contacts') as HTMLTemplateElement;
+const successTemplate = document.querySelector('#success') as HTMLTemplateElement;
+
+const modal = new Modal(modalContainer, events);
+const catalogView = new CatalogView(galleryContainer, catalogItemTemplate, events);
+const cartView = new CartView(basketTemplate, cartItemTemplate, events);
+
+let currentOrderForm: OrderForm | null = null;
+let currentContactsForm: ContactsForm | null = null;
+
+/* Test
+
+const testProduct: IProduct = {
+    id: 'test-1',
+    title: 'Тестовый товар',
+    description: 'Описание тестового товара',
+    image: './src/images/Subtract.svg',
+    category: 'софт-скил',
+    price: 1000
+};
+
+if (galleryContainer) {
+    const testCardContainer = catalogItemTemplate.content.firstElementChild as HTMLElement;
+    const testCard = new CatalogItem(testCardContainer, events);
+    testCard.render(testProduct);
+    galleryContainer.replaceChildren(testCard.render());
+    console.log('Тест карточки каталога: OK');
+}
+*/
+
+
+function renderCatalog(): void {
+    const products = catalog.getProducts();
+    catalogView.render({ items: products });
+}
+
+function updateCartCounter(): void {
+    const counter = document.querySelector('.header__basket-counter') as HTMLElement;
+    if (counter) {
+        counter.textContent = cart.getCount().toString();
+    }
+}
+
+function renderCart(): void {
+    const items = cart.getItems();
+    const total = cart.getTotal();
+    const cartElement = cartView.render({ items, total });
+    modal.setContent(cartElement);
+}
+
+function openCart(): void {
+    renderCart();
+    modal.open();
+}
+
+function openProductPreview(id: string): void {
+    const product = catalog.getProductById(id);
+    if (!product) return;
+    
+    const previewContainer = productPreviewTemplate.content.firstElementChild;
+    if (!previewContainer || !(previewContainer instanceof HTMLElement)) {
+        console.error('Preview template invalid');
+        return;
+    }
+    const clone = previewContainer.cloneNode(true) as HTMLElement;
+    const preview = new ProductPreview(clone, events);
+    preview.render(product);
+    
+    const inCart = cart.isInCart(id);
+    preview.setButtonState(inCart);
+    
+    modal.setContent(preview.render());
+    modal.open();
+}
+
+function addToCart(id: string): void {
+    const product = catalog.getProductById(id);
+    if (product && product.price !== null) {
+        cart.addItem(product);
+        
+        const preview = document.querySelector('.card_full');
+        if (preview) {
+            const button = preview.querySelector('.card__button') as HTMLButtonElement;
+            if (button && !button.disabled) {
+                button.disabled = true;
+                button.textContent = 'Уже в корзине';
+            }
+        }
+    }
+}
+
+function removeFromCart(id: string): void {
+    cart.removeItem(id);
+    renderCart();
+}
+
+function validateOrderForm(): void {
+    if (!currentOrderForm) return;
+    
+    const errors = buyer.validate();
+    const isValid = !errors.payment && !errors.address;
+    currentOrderForm.setValid(isValid);
+    
+    const errorMessages = [];
+    if (errors.payment) errorMessages.push(errors.payment);
+    if (errors.address) errorMessages.push(errors.address);
+    currentOrderForm.showErrors(errorMessages);
+}
+
+function validateContactsForm(): void {
+    if (!currentContactsForm) return;
+    
+    const errors = buyer.validate();
+    const isValid = !errors.email && !errors.phone;
+    currentContactsForm.setValid(isValid);
+    
+    const errorMessages = [];
+    if (errors.email) errorMessages.push(errors.email);
+    if (errors.phone) errorMessages.push(errors.phone);
+    currentContactsForm.showErrors(errorMessages);
+}
+
+function openOrderForm(): void {
+    const formContainer = orderTemplate.content.firstElementChild;
+    if (!formContainer || !(formContainer instanceof HTMLFormElement)) return;
+    const clone = formContainer.cloneNode(true) as HTMLFormElement;
+    currentOrderForm = new OrderForm(clone, events);
+    
+    const buyerData = buyer.getData();
+    const errors = buyer.validate();
+    
+    currentOrderForm.render({
+        payment: buyerData.payment || undefined,
+        address: buyerData.address,
+        errors: errors
+    });
+    
+    validateOrderForm();
+    modal.setContent(currentOrderForm.render());
+    modal.open();
+}
+
+function openContactsForm(): void {
+    const formContainer = contactsTemplate.content.firstElementChild;
+    if (!formContainer || !(formContainer instanceof HTMLFormElement)) return;
+    const clone = formContainer.cloneNode(true) as HTMLFormElement;
+    currentContactsForm = new ContactsForm(clone, events);
+    
+    const buyerData = buyer.getData();
+    const errors = buyer.validate();
+    
+    currentContactsForm.render({
+        email: buyerData.email,
+        phone: buyerData.phone,
+        errors: errors
+    });
+    
+    validateContactsForm();
+    modal.setContent(currentContactsForm.render());
+}
+
+function submitOrder(): void {
+    const buyerData = buyer.getData();
+    const cartItems = cart.getItems();
+    
+    const orderData: IOrderData = {
+        payment: buyerData.payment,
+        email: buyerData.email,
+        phone: buyerData.phone,
+        address: buyerData.address,
+        total: cart.getTotal(),
+        items: cartItems.map(item => item.id)
+    };
+    
+    larekApi.postOrder(orderData)
+        .then(response => {
+            const successContainer = successTemplate.content.firstElementChild;
+            if (successContainer && successContainer instanceof HTMLElement) {
+                const clone = successContainer.cloneNode(true) as HTMLElement;
+                const successView = new SuccessView(clone, events);
+                successView.render({ total: response.total });
+                modal.setContent(successView.render());
+            }
+        })
+        .catch(err => {
+            console.error('Ошибка оформления заказа:', err);
+            alert('Произошла ошибка при оформлении заказа. Попробуйте позже.');
+        });
+}
+
+function updateFormsValidation(errors: IBuyerValidate): void {
+    if (currentOrderForm) {
+        const isValid = !errors.payment && !errors.address;
+        currentOrderForm.setValid(isValid);
+        
+        const errorMessages = [];
+        if (errors.payment) errorMessages.push(errors.payment);
+        if (errors.address) errorMessages.push(errors.address);
+        currentOrderForm.showErrors(errorMessages);
+    }
+    
+    if (currentContactsForm) {
+        const isValid = !errors.email && !errors.phone;
+        currentContactsForm.setValid(isValid);
+        
+        const errorMessages = [];
+        if (errors.email) errorMessages.push(errors.email);
+        if (errors.phone) errorMessages.push(errors.phone);
+        currentContactsForm.showErrors(errorMessages);
+    }
+}
+
+events.on('catalog:changed', () => {
+    renderCatalog();
+});
+
+events.on('cart:changed', () => {
+    updateCartCounter();
+    if (modal) {
+        renderCart();
+    }
+});
+
+events.on('buyer:validation-changed', (errors: IBuyerValidate) => {
+    updateFormsValidation(errors);
+});
+
+events.on('catalog:item-selected', (data: { id: string }) => {
+    openProductPreview(data.id);
+});
+
+events.on('cart:add', (data: { id: string }) => {
+    addToCart(data.id);
+});
+
+events.on('cart:remove', (data: { id: string }) => {
+    removeFromCart(data.id);
+});
+
+events.on('cart:open', () => {
+    openCart();
+});
+
+events.on('order:start', () => {
+    openOrderForm();
+});
+
+events.on('order:payment-select', (data: { payment: 'cash' | 'card' }) => {
+    buyer.setData({ payment: data.payment });
+});
+
+events.on('order:address-change', (data: { address: string }) => {
+    buyer.setData({ address: data.address });
+});
+
+events.on('order:submit', () => {
+    openContactsForm();
+});
+
+events.on('contacts:email-change', (data: { email: string }) => {
+    buyer.setData({ email: data.email });
+});
+
+events.on('contacts:phone-change', (data: { phone: string }) => {
+    buyer.setData({ phone: data.phone });
+});
+
+events.on('contacts:submit', () => {
+    submitOrder();
+});
+
+events.on('modal:close', () => {
+    currentOrderForm = null;
+    currentContactsForm = null;
+});
+
+events.on('success:close', () => {
+    modal.close();
+    cart.clear();
+    buyer.clear();
+});
+
+larekApi.getProducts()
+    .then(data => {
+        catalog.setProducts(data.items);
+    })
+    .catch(err => {
+        console.error('Ошибка загрузки товаров:', err);
+    });
+
+const headerBasket = document.querySelector('.header__basket') as HTMLElement;
+if (headerBasket) {
+    headerBasket.addEventListener('click', () => {
+        events.emit('cart:open');
+    });
+}
