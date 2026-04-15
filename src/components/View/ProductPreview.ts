@@ -2,6 +2,7 @@ import { Component } from "../base/Component";
 import { EventEmitter } from "../base/Events";
 import { IProduct } from "../../types";
 import { categoryMap } from "../../utils/constants";
+import { CDN_URL } from '../../utils/constants';
 
 export class ProductPreview extends Component<IProduct> {
   protected image: HTMLImageElement | null;
@@ -48,7 +49,7 @@ export class ProductPreview extends Component<IProduct> {
 
   setData(data: IProduct): void {
     this.productId = data.id;
-    this.updateImage(this.image, data.image, data.title);
+    this.updateImage(this.image, CDN_URL + data.image, data.title);
     this.updateText(this.title, data.title);
     this.updateText(this.description, data.description);
     this.updateText(
@@ -70,7 +71,7 @@ export class ProductPreview extends Component<IProduct> {
         this.button.textContent = "Недоступно";
       } else {
         this.button.disabled = false;
-        this.button.textContent = "В корзину";
+        this.button.textContent = "Купить";
       }
     }
   }
@@ -80,7 +81,7 @@ export class ProductPreview extends Component<IProduct> {
       if (inCart) {
         this.button.textContent = "Удалить из корзины";
       } else {
-        this.button.textContent = "В корзину";
+        this.button.textContent = "Купить";
       }
     }
   }

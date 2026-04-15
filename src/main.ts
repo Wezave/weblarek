@@ -224,6 +224,8 @@ function submitOrder(): void {
   larekApi
     .postOrder(orderData)
     .then((response) => {
+      cart.clear();
+      buyer.clear();
       const successContainer = successTemplate.content.firstElementChild;
       if (successContainer && successContainer instanceof HTMLElement) {
         const clone = successContainer.cloneNode(true) as HTMLElement;
@@ -263,9 +265,6 @@ events.on("catalog:changed", () => {
 
 events.on("cart:changed", () => {
   updateCartCounter();
-  if (modal) {
-    renderCart();
-  }
 });
 
 events.on("buyer:validation-changed", (errors: IBuyerValidate) => {

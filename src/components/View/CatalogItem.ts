@@ -2,6 +2,7 @@ import { Component } from "../base/Component";
 import { EventEmitter } from "../base/Events";
 import { IProduct } from "../../types";
 import { categoryMap } from "../../utils/constants";
+import { CDN_URL } from '../../utils/constants';
 
 export class CatalogItem extends Component<IProduct> {
   protected category: HTMLElement | null;
@@ -49,7 +50,7 @@ export class CatalogItem extends Component<IProduct> {
   setData(data: IProduct): void {
     this.productId = data.id;
     this.updateText(this.title, data.title);
-    this.updateImage(this.image, data.image, data.title);
+    this.updateImage(this.image, CDN_URL + data.image, data.title);
     this.updateText(
       this.price,
       data.price ? `${data.price} синапсов` : "Бесценно",
