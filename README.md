@@ -51,13 +51,13 @@
 **Методы:**
 - `setData(data: Partial<IBuyer>): void` – сохраняет одно или несколько полей данных покупателя (частичное обновление), генерирует `buyer:changed`.
 - `getData(): IBuyer` – возвращает все сохранённые данные (если поле не заполнено, возвращается пустая строка или `null`).
-- `clear(): void` – сбрасывает все данные в начальное состояние, генерирует события.
+- `clear(): void` – сбрасывает все данные в начальное состояние, генерирует `buyer:changed`.
 - `validate(): IBuyerValidate` – проверяет валидность полей. Возвращает объект с ошибками, где ключ – имя поля, значение – текст ошибки. Поле считается валидным, если оно не пустое (для строк – не пустая строка после `trim()`, для `payment` – выбран вариант). Если ошибок нет, объект пуст.
 
 ### Слой коммуникации
 
 #### Класс LarekApi
-**Назначение:** инкапсулирует логику взаимодействия с API сервера «Веб-ларёк». Использует композицию с классом `Api`, который выполняет HTTP-запросы.
+**Назначение:** инкапсулирует логику взаимодействия с API сервера. Использует композицию с классом `Api`, который выполняет HTTP-запросы.
 
 **Конструктор:**  
 `constructor(private api: IApi)` – принимает объект, реализующий интерфейс `IApi` (обычно экземпляр класса `Api`).
@@ -79,9 +79,20 @@
 - Классы не хранят данные в полях (только DOM элементы)
 - Все слушатели событий устанавливаются единожды в конструкторе
 - Метод `render()` возвращает корневой DOM элемент
-- Действия пользователя отображаются через брокер событий `EventEmitter`
+- Действия пользователя передаются через колбэки (`actions`), которые вызывают события через `EventEmitter`
 
 #### Компоненты представления
+
+**Класс `Header`** – управление шапкой (счётчик корзины).
+
+Конструктор:
+- `constructor(container: HTMLElement)`
+
+Поля:
+- `counter: HTMLElement` – элемент счётчика
+
+Методы:
+- `setCount(count: number): void` – обновляет счётчик
 
 **Класс `Modal`** – управление модальным окном.
 
@@ -100,111 +111,84 @@
 - `setContent(content: HTMLElement): void` – устанавливает контент в модальное окно
 - `render(): HTMLElement` – возвращает корневой элемент
 
-Генерируемые события:
-- `modal:open` – при открытии модального окна
-- `modal:close` – при закрытии модального окна
-
 **Класс `CatalogItem`** – карточка товара в каталоге.
 
 Конструктор:
-- `constructor(container: HTMLElement, events: EventEmitter)`
+- `constructor(container: HTMLElement, actions: { onClick: (id: string) => void })`
 
 Поля:
 - `container: HTMLElement` – корневой элемент карточки
-- `category: HTMLElement` – элемент категории
-- `title: HTMLElement` – элемент заголовка
-- `image: HTMLImageElement` – элемент изображения
-- `price: HTMLElement` – элемент цены
-- `events: EventEmitter` – брокер событий
-- `productId: string` – идентификатор товара (устанавливается при рендере)
+- `categoryElement: HTMLElement` – элемент категории
+- `titleElement: HTMLElement` – элемент заголовка
+- `imageElement: HTMLImageElement` – элемент изображения
+- `priceElement: HTMLElement` – элемент цены
 
 Методы:
-- `setData(data: IProduct): void` – заполняет карточку данными товара
 - `render(data?: IProduct): HTMLElement` – отображает карточку
-
-Генерируемые события:
-- `catalog:item-selected` – при клике на карточку (передаётся `{ id: string }`)
 
 **Класс `CatalogView`** – отображение списка товаров (галерея).
 
 Конструктор:
-- `constructor(container: HTMLElement, cardTemplate: HTMLTemplateElement, events: EventEmitter)`
+- `constructor(container: HTMLElement)`
 
 Поля:
 - `container: HTMLElement` – контейнер галереи
-- `events: EventEmitter` – брокер событий
-- `cardTemplate: HTMLTemplateElement` – шаблон карточки
-- `itemsMap: Map<string, CatalogItem>` – карта созданных карточек
 
 Методы:
-- `render(data?: { items: IProduct[] }): HTMLElement` – отображает список товаров
-- `clear(): void` – очищает галерею
+- `setItems(items: HTMLElement[]): void` – заменяет содержимое галереи переданными карточками
+- `render(data?: { items: HTMLElement[] }): HTMLElement` – отображает список
 
 **Класс `ProductPreview`** – детальный просмотр товара.
 
 Конструктор:
-- `constructor(container: HTMLElement, events: EventEmitter)`
+- `constructor(container: HTMLElement, actions: { onToggle: (id: string) => void })`
 
 Поля:
 - `container: HTMLElement` – корневой элемент
-- `image: HTMLImageElement` – элемент изображения
-- `category: HTMLElement` – элемент категории
-- `title: HTMLElement` – элемент заголовка
-- `description: HTMLElement` – элемент описания
-- `price: HTMLElement` – элемент цены
-- `button: HTMLButtonElement` – кнопка
-- `events: EventEmitter` – брокер событий
-- `productId: string` – идентификатор текущего товара
+- `imageElement: HTMLImageElement`
+- `categoryElement: HTMLElement`
+- `titleElement: HTMLElement`
+- `descriptionElement: HTMLElement`
+- `priceElement: HTMLElement`
+- `buttonElement: HTMLButtonElement`
 
 Методы:
-- `setData(data: IProduct): void` – заполняет данными товара
+- `setButtonState(inCart: boolean): void` – меняет текст кнопки в зависимости от наличия товара в корзине
 - `render(data?: IProduct): HTMLElement` – отображает карточку
-- `setButtonState(inCart: boolean): void` – меняет состояние кнопки
-
-Генерируемые события:
-- `cart:toggle` – при клике на кнопку (передаётся `{ id: string }`)
 
 **Класс `CartItem`** – элемент корзины.
 
 Конструктор:
-- `constructor(container: HTMLElement, events: EventEmitter)`
+- `constructor(container: HTMLElement, actions: { onRemove: (id: string) => void })`
 
 Поля:
-- `container: HTMLElement` – корневой элемент
-- `indexElement: HTMLElement` – элемент порядкового номера
-- `title: HTMLElement` – элемент заголовка
-- `price: HTMLElement` – элемент цены
-- `deleteButton: HTMLButtonElement` – кнопка удаления
-- `events: EventEmitter` – брокер событий
-- `productId: string` – идентификатор товара
+- `container: HTMLElement`
+- `indexElement: HTMLElement`
+- `titleElement: HTMLElement`
+- `priceElement: HTMLElement`
+- `deleteButton: HTMLButtonElement`
 
 Методы:
-- `setData(data: IProduct, index: number): void` – заполняет данными
-- `render(data?: { item: IProduct; index: number }): HTMLElement` – отображает элемент
-
-Генерируемые события:
-- `cart:remove` – при клике на кнопку удаления (передаётся `{ id: string }`)
+- `render(data?: { item: IProduct; index: number }): HTMLElement` – отображает элемент корзины
 
 **Класс `CartView`** – отображение корзины.
 
 Конструктор:
-- `constructor(template: HTMLTemplateElement, itemTemplate: HTMLTemplateElement, events: EventEmitter)`
+- `constructor(container: HTMLElement, events: EventEmitter)`
 
 Поля:
-- `container: HTMLElement` – корневой элемент
-- `list: HTMLElement | null` – контейнер для списка товаров (`.basket__list`)
-- `priceElement: HTMLElement | null` – элемент общей стоимости
-- `button: HTMLButtonElement | null` – кнопка оформления заказа
+- `list: HTMLElement` – контейнер списка товаров
+- `priceElement: HTMLElement` – элемент общей стоимости
+- `button: HTMLButtonElement` – кнопка оформления
 - `events: EventEmitter` – брокер событий
-- `itemTemplate: HTMLTemplateElement` – шаблон элемента корзины
-- `itemsMap: Map<string, CartItem>` – карта элементов корзины
 
 Методы:
-- `render(data?: { items: IProduct[]; total: number }): HTMLElement` – отображает корзину, при пустом списке показывает сообщение «Корзина пуста»
-- `clear(): void` – очищает список
+- `setItems(items: HTMLElement[]): void` – заполняет список товаров
+- `setTotal(total: number): void` – обновляет общую стоимость
+- `render(data?: { items: HTMLElement[]; total: number }): HTMLElement` – отображает корзину
 
 Генерируемые события:
-- `order:start` – при клике на кнопку оформления заказа
+- `order:start` – при клике на кнопку «Оформить»
 
 **Класс `OrderForm`** – форма заказа (способ оплаты и адрес).
 
@@ -212,23 +196,25 @@
 - `constructor(container: HTMLFormElement, events: EventEmitter)`
 
 Поля:
-- `container: HTMLFormElement` – корневой элемент формы
-- `cardButton: HTMLButtonElement` – кнопка оплаты картой
-- `cashButton: HTMLButtonElement` – кнопка оплаты наличными
-- `addressInput: HTMLInputElement` – поле ввода адреса
-- `submitButton: HTMLButtonElement` – кнопка «Далее»
-- `errorsSpan: HTMLElement` – элемент для отображения ошибок
-- `events: EventEmitter` – брокер событий
+- `cardButton: HTMLButtonElement`
+- `cashButton: HTMLButtonElement`
+- `addressInput: HTMLInputElement`
+- `submitButton: HTMLButtonElement`
+- `errorsSpan: HTMLElement`
+- `events: EventEmitter`
 
 Методы:
-- `render(data?: { payment?: TPayment; address?: string; errors?: IBuyerValidate }): HTMLElement`
-- `setValid(isValid: boolean): void` – устанавливает состояние кнопки
+- `setPayment(payment: TPayment): void` – устанавливает активную кнопку оплаты
+- `setAddress(address: string): void` – заполняет поле адреса
+- `setValid(isValid: boolean): void` – активирует/деактивирует кнопку отправки
 - `showErrors(errors: string[]): void` – отображает ошибки
-- `clear(): void` – очищает форму
+- `setErrors(errors: IBuyerValidate): void` – обновляет состояние формы по ошибкам
+- `clear(): void` – очищает поля и ошибки
+- `render(data?: { payment?: TPayment; address?: string; errors?: IBuyerValidate }): HTMLElement`
 
 Генерируемые события:
-- `order:payment-select` – при выборе способа оплаты (передаётся `{ payment: TPayment }`)
-- `order:address-change` – при изменении адреса (передаётся `{ address: string }`)
+- `order:payment-select` – при выборе способа оплаты
+- `order:address-change` – при изменении адреса
 - `order:submit` – при отправке формы
 
 **Класс `ContactsForm`** – форма контактов (email и телефон).
@@ -237,23 +223,25 @@
 - `constructor(container: HTMLFormElement, events: EventEmitter)`
 
 Поля:
-- `container: HTMLFormElement` – корневой элемент формы
-- `emailInput: HTMLInputElement` – поле ввода email
-- `phoneInput: HTMLInputElement` – поле ввода телефона
-- `submitButton: HTMLButtonElement` – кнопка «Оплатить»
-- `errorsSpan: HTMLElement` – элемент для отображения ошибок
-- `events: EventEmitter` – брокер событий
+- `emailInput: HTMLInputElement`
+- `phoneInput: HTMLInputElement`
+- `submitButton: HTMLButtonElement`
+- `errorsSpan: HTMLElement`
+- `events: EventEmitter`
 
 Методы:
+- `setEmail(email: string): void`
+- `setPhone(phone: string): void`
+- `setValid(isValid: boolean): void`
+- `showErrors(errors: string[]): void`
+- `setErrors(errors: IBuyerValidate): void`
+- `clear(): void`
 - `render(data?: { email?: string; phone?: string; errors?: IBuyerValidate }): HTMLElement`
-- `setValid(isValid: boolean): void` – устанавливает состояние кнопки
-- `showErrors(errors: string[]): void` – отображает ошибки
-- `clear(): void` – очищает форму
 
 Генерируемые события:
-- `contacts:email-change` – при изменении email (передаётся `{ email: string }`)
-- `contacts:phone-change` – при изменении телефона (передаётся `{ phone: string }`)
-- `contacts:submit` – при отправке формы
+- `contacts:email-change`
+- `contacts:phone-change`
+- `contacts:submit`
 
 **Класс `SuccessView`** – окно успешного оформления заказа.
 
@@ -261,152 +249,141 @@
 - `constructor(container: HTMLElement, events: EventEmitter)`
 
 Поля:
-- `container: HTMLElement` – корневой элемент
-- `description: HTMLElement` – элемент с описанием (сумма списания)
-- `button: HTMLButtonElement` – кнопка закрытия
-- `events: EventEmitter` – брокер событий
+- `description: HTMLElement`
+- `button: HTMLButtonElement`
 
 Методы:
-- `render(data?: { total: number }): HTMLElement` – отображает окно успеха
-- `setTotal(total: number): void` – устанавливает сумму
+- `setTotal(total: number): void`
+- `render(data?: { total: number }): HTMLElement`
 
 Генерируемые события:
 - `success:close` – при клике на кнопку закрытия
 
 ### Система событий
 
-Все события генерируются через `EventEmitter` и обрабатываются в презентере.
+Все события генерируются через `EventEmitter` и обрабатываются в презентере. События позволяют компонентам обмениваться информацией без прямого обращения друг к другу.
 
 #### События каталога
 
 **`catalog:item-selected`**
 - Генерируется: `CatalogItem` при клике на карточку товара.
 - Данные: `{ id: string }` – идентификатор выбранного товара.
+- Назначение: сохранить выбранный товар в модели `Catalog`.
+
+**`catalog:selected-changed`**
+- Генерируется: `Catalog` при изменении выбранного товара.
 - Назначение: открыть модальное окно с детальным просмотром товара.
+
+**`catalog:changed`**
+- Генерируется: `Catalog` при сохранении массива товаров.
+- Назначение: обновить отображение каталога.
 
 #### События корзины
 
 **`cart:toggle`**
 - Генерируется: `ProductPreview` при клике на кнопку.
 - Данные: `{ id: string }` – идентификатор товара.
-- Назначение: добавить товар в корзину, если его там нет, или удалить, если есть.
+- Назначение: добавить/удалить товар в/из корзины.
 
 **`cart:remove`**
-- Генерируется: `CartItem` при клике на кнопку удаления товара.
-- Данные: `{ id: string }` – идентификатор удаляемого товара.
-- Назначение: удалить товар из модели корзины и обновить отображение.
-
-**`order:start`**
-- Генерируется: `CartView` при клике на кнопку «Оформить».
-- Данные: `{}` (без данных).
-- Назначение: открыть форму заказа (способ оплаты и адрес).
+- Генерируется: `CartItem` при клике на кнопку удаления.
+- Данные: `{ id: string }`.
+- Назначение: удалить товар из корзины.
 
 **`cart:open`**
 - Генерируется: кликом по иконке корзины в шапке.
 - Данные: `{}`.
 - Назначение: открыть модальное окно корзины.
 
-#### События формы заказа
+**`cart:changed`**
+- Генерируется: `Cart` при любом изменении списка товаров.
+- Назначение: обновить счётчик корзины и отображение корзины (если она открыта).
+
+#### События форм заказа
+
+**`order:start`**
+- Генерируется: `CartView` при клике на кнопку «Оформить».
+- Данные: `{}`.
+- Назначение: открыть форму заказа.
 
 **`order:payment-select`**
-- Генерируется: `OrderForm` при клике на кнопку выбора способа оплаты.
-- Данные: `{ payment: 'cash' | 'card' }` – выбранный способ оплаты.
-- Назначение: сохранить способ оплаты в модели `Buyer` и проверить валидность формы.
+- Генерируется: `OrderForm` при выборе способа оплаты.
+- Данные: `{ payment: 'cash' | 'card' }`.
+- Назначение: сохранить способ оплаты в модели `Buyer`.
 
 **`order:address-change`**
-- Генерируется: `OrderForm` при вводе адреса в текстовое поле.
-- Данные: `{ address: string }` – введённый адрес.
-- Назначение: сохранить адрес в модели `Buyer` и проверить валидность формы.
+- Генерируется: `OrderForm` при вводе адреса.
+- Данные: `{ address: string }`.
+- Назначение: сохранить адрес в модели `Buyer`.
 
 **`order:submit`**
-- Генерируется: `OrderForm` при отправке формы (клик на кнопку «Далее»).
-- Данные: `{ payment: TPayment, address: string }` – данные формы заказа.
-- Назначение: открыть форму контактов (email и телефон).
-
-#### События формы контактов
+- Генерируется: `OrderForm` при отправке формы.
+- Данные: `{}`.
+- Назначение: открыть форму контактов.
 
 **`contacts:email-change`**
-- Генерируется: `ContactsForm` при вводе email в текстовое поле.
-- Данные: `{ email: string }` – введённый email.
-- Назначение: сохранить email в модели `Buyer` и проверить валидность формы.
+- Генерируется: `ContactsForm` при вводе email.
+- Данные: `{ email: string }`.
+- Назначение: сохранить email в модели `Buyer`.
 
 **`contacts:phone-change`**
-- Генерируется: `ContactsForm` при вводе телефона в текстовое поле.
-- Данные: `{ phone: string }` – введённый телефон.
-- Назначение: сохранить телефон в модели `Buyer` и проверить валидность формы.
+- Генерируется: `ContactsForm` при вводе телефона.
+- Данные: `{ phone: string }`.
+- Назначение: сохранить телефон в модели `Buyer`.
 
 **`contacts:submit`**
-- Генерируется: `ContactsForm` при отправке формы (клик на кнопку «Оплатить»).
-- Данные: `{ email: string, phone: string }` – данные формы контактов.
-- Назначение: отправить заказ на сервер через `LarekApi`.
+- Генерируется: `ContactsForm` при отправке формы.
+- Данные: `{}`.
+- Назначение: отправить заказ на сервер.
 
 #### События модального окна
 
 **`modal:open`**
-- Генерируется: `Modal` при открытии модального окна.
+- Генерируется: `Modal` при открытии.
 - Данные: `{}`.
-- Назначение: уведомить другие компоненты об открытии модального окна (при необходимости).
+- Назначение: опциональное
 
 **`modal:close`**
-- Генерируется: `Modal` при закрытии модального окна (клик на крестик или на оверлей).
+- Генерируется: `Modal` при закрытии.
 - Данные: `{}`.
-- Назначение: очистить временные данные, вернуться к предыдущему состоянию.
+- Назначение: сбросить состояние форм.
 
 **`success:close`**
-- Генерируется: `SuccessView` при клике на кнопку «За новыми покупками!».
+- Генерируется: `SuccessView` при клике на кнопку.
 - Данные: `{}`.
 - Назначение: закрыть модальное окно, очистить корзину и данные покупателя.
 
-#### События моделей данных
-
-**`catalog:changed`**
-- Генерируется: `Catalog` при сохранении массива товаров.
-- Данные: `{ products: IProduct[] }` – массив всех товаров.
-- Назначение: обновить отображение каталога.
-
-**`catalog:selected-changed`**
-- Генерируется: `Catalog` при сохранении выбранного товара.
-- Данные: `{ selectedProduct: IProduct | null }` – выбранный товар.
-- Назначение: открыть детальный просмотр товара.
-
-**`cart:changed`**
-- Генерируется: `Cart` при добавлении, удалении или очистке товаров.
-- Данные: `{ items: IProduct[], total: number, count: number }` – текущее состояние корзины.
-- Назначение: обновить отображение корзины и счётчик в шапке.
-
-**`buyer:changed`**
-- Генерируется: `Buyer` при изменении любого поля данных покупателя.
-- Данные: `IBuyer` – текущие данные покупателя.
-- Назначение: обновить отображение форм.
-
 ### Презентер
 
-Презентер реализован непосредственно в основном скрипте `main.ts`. Он связывает модели и представления, обрабатывает все события.
+Презентер реализован непосредственно в файле `main.ts`. Он связывает модели и представления, обрабатывает все события.
 
 #### Принципы работы презентера
 
-- Презентер не генерирует события, только обрабатывает их
-- Презентер подписывается на события от моделей данных и представлений
-- При обработке события презентер вызывает соответствующие методы моделей или представлений
-- Представление перерисовывается только при обработке события от модели данных или при открытии модального окна
+- Презентер не генерирует события, только обрабатывает их.
+- Презентер подписывается на события от моделей данных и представлений.
+- При обработке события презентер вызывает соответствующие методы моделей или представлений.
+- Представление перерисовывается только при обработке события от модели данных.
+- Презентер не хранит глобальных переменных, все экземпляры классов – константы.
 
 #### Обрабатываемые события
 
 **От моделей данных:**
-- `catalog:changed` – отобразить каталог товаров на главной странице
-- `cart:changed` – обновить счётчик в шапке и перерисовать корзину (если открыта)
+- `catalog:changed` – обновить каталог.
+- `catalog:selected-changed` – открыть предпросмотр товара.
+- `cart:changed` – обновить счётчик корзины и отображение корзины (если она открыта).
+- `buyer:changed` – обновить текущую открытую форму (если есть).
 
 **От представлений:**
-- `catalog:item-selected` – открыть модальное окно с детальным просмотром товара
-- `cart:toggle` – добавить или удалить товар из корзины
-- `cart:remove` – удалить товар из корзины
-- `cart:open` – открыть модальное окно корзины
-- `order:start` – открыть форму заказа
-- `order:payment-select` – сохранить выбранный способ оплаты в модели `Buyer`
-- `order:address-change` – сохранить адрес в модели `Buyer`
-- `order:submit` – открыть форму контактов
-- `contacts:email-change` – сохранить email в модели `Buyer`
-- `contacts:phone-change` – сохранить телефон в модели `Buyer`
-- `contacts:submit` – отправить заказ на сервер
-- `modal:close` – очистить временные ссылки на формы
-- `success:close` – закрыть модальное окно, очистить корзину и данные покупателя
+- `catalog:item-selected` – сохранить выбранный товар в модели.
+- `cart:toggle` – добавить/удалить товар в корзине.
+- `cart:remove` – удалить товар из корзины.
+- `cart:open` – открыть корзину.
+- `order:start` – открыть форму заказа.
+- `order:payment-select` – сохранить способ оплаты.
+- `order:address-change` – сохранить адрес.
+- `order:submit` – открыть форму контактов.
+- `contacts:email-change` – сохранить email.
+- `contacts:phone-change` – сохранить телефон.
+- `contacts:submit` – отправить заказ.
+- `modal:close` – сбросить состояние форм.
+- `success:close` – закрыть модальное окно, очистить корзину и данные покупателя.
