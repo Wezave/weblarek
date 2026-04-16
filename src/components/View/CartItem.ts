@@ -1,49 +1,44 @@
 import { Component } from "../base/Component";
-import { EventEmitter } from "../base/Events";
 import { IProduct } from "../../types";
+import { ensureElement } from "../../utils/utils";
+
+interface CartItemActions {
+  onRemove: (id: string) => void;
+}
 
 export class CartItem extends Component<{ item: IProduct; index: number }> {
-  protected indexElement: HTMLElement;
-  protected title: HTMLElement;
-  protected price: HTMLElement;
-  protected deleteButton: HTMLButtonElement;
-  protected events: EventEmitter;
-  protected productId: string = "";
+  private indexElement: HTMLElement;
+  private titleElement: HTMLElement;
+  private priceElement: HTMLElement;
+  private deleteButton: HTMLButtonElement;
+  private actions: CartItemActions;
 
-  constructor(container: HTMLElement, events: EventEmitter) {
+  constructor(container: HTMLElement, actions: CartItemActions) {
     super(container);
-    this.events = events;
-
-    this.indexElement = this.container.querySelector(
-      ".basket__item-index",
-    ) as HTMLElement;
-    this.title = this.container.querySelector(".card__title") as HTMLElement;
-    this.price = this.container.querySelector(".card__price") as HTMLElement;
-    this.deleteButton = this.container.querySelector(
+    this.actions = actions;
+    this.indexElement = ensureElement(".basket__item-index", container);
+    this.titleElement = ensureElement(".card__title", container);
+    this.priceElement = ensureElement(".card__price", container);
+    this.deleteButton = ensureElement(
       ".basket__item-delete",
+      container,
     ) as HTMLButtonElement;
 
     this.deleteButton.addEventListener("click", () => {
-      this.events.emit("cart:remove", { id: this.productId });
+      const id = this.container.dataset.id;
+      if (id) this.actions.onRemove(id);
     });
   }
 
-  private updateText(element: HTMLElement, value: string): void {
-    if (element) element.textContent = value;
-  }
-
-  setData(data: IProduct, idx: number): void {
-    this.productId = data.id;
-    this.updateText(this.indexElement, idx.toString());
-    this.updateText(this.title, data.title);
-    this.updateText(
-      this.price,
-      data.price ? `${data.price} синапсов` : "Бесценно",
-    );
-  }
-
   render(data?: { item: IProduct; index: number }): HTMLElement {
-    if (data) this.setData(data.item, data.index);
+    if (data) {
+      this.container.dataset.id = data.item.id;
+      this.indexElement.textContent = String(data.index);
+      this.titleElement.textContent = data.item.title;
+      this.priceElement.textContent = data.item.price
+        ? `${data.item.price} синапсов`
+        : "Бесценно";
+    }
     return this.container;
   }
 }

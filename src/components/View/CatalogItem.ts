@@ -1,58 +1,52 @@
-import { Component } from '../base/Component';
-import { EventEmitter } from '../base/Events';
-import { IProduct } from '../../types';
-import { categoryMap, CDN_URL } from '../../utils/constants';
+import { Component } from "../base/Component";
+import { IProduct } from "../../types";
+import { ensureElement } from "../../utils/utils";
+import { categoryMap, CDN_URL } from "../../utils/constants";
+
+interface CatalogItemActions {
+  onClick: (id: string) => void;
+}
 
 export class CatalogItem extends Component<IProduct> {
-    protected category: HTMLElement | null;
-    protected title: HTMLElement | null;
-    protected image: HTMLImageElement | null;
-    protected price: HTMLElement | null;
-    protected events: EventEmitter;
-    protected productId: string = '';
+  private categoryElement: HTMLElement;
+  private titleElement: HTMLElement;
+  private imageElement: HTMLImageElement;
+  private priceElement: HTMLElement;
+  private actions: CatalogItemActions;
 
-    constructor(container: HTMLElement, events: EventEmitter) {
-        super(container);
-        this.events = events;
+  constructor(container: HTMLElement, actions: CatalogItemActions) {
+    super(container);
+    this.actions = actions;
+    this.categoryElement = ensureElement(".card__category", container);
+    this.titleElement = ensureElement(".card__title", container);
+    this.imageElement = ensureElement(
+      ".card__image",
+      container,
+    ) as HTMLImageElement;
+    this.priceElement = ensureElement(".card__price", container);
 
-        if (!this.container) throw new Error('CatalogItem: container is null');
+    this.container.addEventListener("click", () => {
+      const id = this.container.dataset.id;
+      if (id) this.actions.onClick(id);
+    });
+  }
 
-        this.category = this.container.querySelector('.card__category');
-        this.title = this.container.querySelector('.card__title');
-        this.image = this.container.querySelector('.card__image');
-        this.price = this.container.querySelector('.card__price');
+  render(data?: IProduct): HTMLElement {
+    if (data) {
+      this.container.dataset.id = data.id;
+      this.titleElement.textContent = data.title;
+      this.imageElement.src = CDN_URL + data.image;
+      this.imageElement.alt = data.title;
+      this.priceElement.textContent = data.price
+        ? `${data.price} синапсов`
+        : "Бесценно";
 
-        this.container.addEventListener('click', () => {
-            this.events.emit('catalog:item-selected', { id: this.productId });
-        });
+      const categoryClass =
+        categoryMap[data.category as keyof typeof categoryMap] ||
+        "card__category_other";
+      this.categoryElement.className = `card__category ${categoryClass}`;
+      this.categoryElement.textContent = data.category;
     }
-
-    private updateText(element: HTMLElement | null, value: string): void {
-        if (element) element.textContent = value;
-    }
-
-    private updateImage(element: HTMLImageElement | null, src: string, alt: string): void {
-        if (element) {
-            element.src = src;
-            element.alt = alt;
-        }
-    }
-
-    setData(data: IProduct): void {
-        this.productId = data.id;
-        this.updateText(this.title, data.title);
-        this.updateImage(this.image, CDN_URL + data.image, data.title);
-        this.updateText(this.price, data.price ? `${data.price} синапсов` : 'Бесценно');
-
-        const categoryClass = categoryMap[data.category as keyof typeof categoryMap] || 'card__category_other';
-        if (this.category) {
-            this.category.className = `card__category ${categoryClass}`;
-            this.updateText(this.category, data.category);
-        }
-    }
-
-    render(data?: IProduct): HTMLElement {
-        if (data) this.setData(data);
-        return this.container;
-    }
+    return this.container;
+  }
 }

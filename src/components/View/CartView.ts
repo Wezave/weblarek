@@ -1,42 +1,48 @@
-import { Component } from '../base/Component';
-import { EventEmitter } from '../base/Events';
-import { IProduct } from '../../types';
-import { CartItem } from './CartItem';
+import { Component } from "../base/Component";
+import { EventEmitter } from "../base/Events";
 
-export class CartView extends Component<{ items: IProduct[]; total: number }> {
-    protected list: HTMLElement;
-    protected priceElement: HTMLElement;
-    protected button: HTMLButtonElement;
-    protected events: EventEmitter;
-    protected itemTemplate: HTMLTemplateElement;
+export class CartView extends Component<{
+  items: HTMLElement[];
+  total: number;
+}> {
+  private list: HTMLElement;
+  private priceElement: HTMLElement;
+  private button: HTMLButtonElement;
+  private events: EventEmitter;
 
-    constructor(template: HTMLTemplateElement, itemTemplate: HTMLTemplateElement, events: EventEmitter) {
-        super(template.content.firstElementChild as HTMLElement);
-        this.events = events;
-        this.itemTemplate = itemTemplate;
-        this.list = this.container.querySelector('.basket__list') as HTMLElement;
-        this.priceElement = this.container.querySelector('.basket__price') as HTMLElement;
-        this.button = this.container.querySelector('.basket__button') as HTMLButtonElement;
+  constructor(container: HTMLElement, events: EventEmitter) {
+    super(container);
+    this.events = events;
+    this.list = this.container.querySelector(".basket__list") as HTMLElement;
+    this.priceElement = this.container.querySelector(
+      ".basket__price",
+    ) as HTMLElement;
+    this.button = this.container.querySelector(
+      ".basket__button",
+    ) as HTMLButtonElement;
 
-        if (this.button) {
-            this.button.addEventListener('click', () => this.events.emit('order:start'));
-        }
+    if (this.button) {
+      this.button.addEventListener("click", () =>
+        this.events.emit("order:start"),
+      );
     }
+  }
 
-    render(data?: { items: IProduct[]; total: number }): HTMLElement {
-        if (!data) return this.container;
-        this.list.innerHTML = '';
-        const itemTemplate = this.itemTemplate.content.firstElementChild as HTMLElement;
+  setItems(items: HTMLElement[]): void {
+    this.list.innerHTML = "";
+    items.forEach((item) => this.list.appendChild(item));
+    this.button.disabled = items.length === 0;
+  }
 
-        data.items.forEach((item, idx) => {
-            const clone = itemTemplate.cloneNode(true) as HTMLElement;
-            const cartItem = new CartItem(clone, this.events);
-            cartItem.setData(item, idx + 1);
-            this.list.appendChild(cartItem.render());
-        });
+  setTotal(total: number): void {
+    this.priceElement.textContent = `${total} синапсов`;
+  }
 
-        this.priceElement.textContent = `${data.total} синапсов`;
-        this.button.disabled = data.items.length === 0;
-        return this.container;
+  render(data?: { items: HTMLElement[]; total: number }): HTMLElement {
+    if (data) {
+      this.setItems(data.items);
+      this.setTotal(data.total);
     }
+    return this.container;
+  }
 }

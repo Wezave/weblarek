@@ -1,79 +1,73 @@
-import { Component } from '../base/Component';
-import { EventEmitter } from '../base/Events';
-import { IProduct } from '../../types';
-import { categoryMap, CDN_URL } from '../../utils/constants';
+import { Component } from "../base/Component";
+import { IProduct } from "../../types";
+import { ensureElement } from "../../utils/utils";
+import { categoryMap, CDN_URL } from "../../utils/constants";
+
+interface ProductPreviewActions {
+  onToggle: (id: string) => void;
+}
 
 export class ProductPreview extends Component<IProduct> {
-    protected image: HTMLImageElement | null;
-    protected category: HTMLElement | null;
-    protected title: HTMLElement | null;
-    protected description: HTMLElement | null;
-    protected price: HTMLElement | null;
-    protected button: HTMLButtonElement | null;
-    protected events: EventEmitter;
-    protected productId: string = '';
+  private imageElement: HTMLImageElement;
+  private categoryElement: HTMLElement;
+  private titleElement: HTMLElement;
+  private descriptionElement: HTMLElement;
+  private priceElement: HTMLElement;
+  private buttonElement: HTMLButtonElement;
+  private actions: ProductPreviewActions;
 
-    constructor(container: HTMLElement, events: EventEmitter) {
-        super(container);
-        this.events = events;
+  constructor(container: HTMLElement, actions: ProductPreviewActions) {
+    super(container);
+    this.actions = actions;
+    this.imageElement = ensureElement(
+      ".card__image",
+      container,
+    ) as HTMLImageElement;
+    this.categoryElement = ensureElement(".card__category", container);
+    this.titleElement = ensureElement(".card__title", container);
+    this.descriptionElement = ensureElement(".card__text", container);
+    this.priceElement = ensureElement(".card__price", container);
+    this.buttonElement = ensureElement(
+      ".card__button",
+      container,
+    ) as HTMLButtonElement;
 
-        this.image = this.container.querySelector('.card__image');
-        this.category = this.container.querySelector('.card__category');
-        this.title = this.container.querySelector('.card__title');
-        this.description = this.container.querySelector('.card__text');
-        this.price = this.container.querySelector('.card__price');
-        this.button = this.container.querySelector('.card__button');
+    this.buttonElement.addEventListener("click", () => {
+      const id = this.container.dataset.id;
+      if (id) this.actions.onToggle(id);
+    });
+  }
 
-        if (this.button) {
-            this.button.addEventListener('click', () => {
-                this.events.emit('cart:toggle', { id: this.productId });
-            });
-        }
+  setButtonState(inCart: boolean): void {
+    if (this.buttonElement.disabled) return;
+    this.buttonElement.textContent = inCart ? "Удалить из корзины" : "Купить";
+  }
+
+  render(data?: IProduct): HTMLElement {
+    if (data) {
+      this.container.dataset.id = data.id;
+      this.imageElement.src = CDN_URL + data.image;
+      this.imageElement.alt = data.title;
+      this.titleElement.textContent = data.title;
+      this.descriptionElement.textContent = data.description;
+      this.priceElement.textContent = data.price
+        ? `${data.price} синапсов`
+        : "Бесценно";
+
+      const categoryClass =
+        categoryMap[data.category as keyof typeof categoryMap] ||
+        "card__category_other";
+      this.categoryElement.className = `card__category ${categoryClass}`;
+      this.categoryElement.textContent = data.category;
+
+      if (data.price === null) {
+        this.buttonElement.disabled = true;
+        this.buttonElement.textContent = "Недоступно";
+      } else {
+        this.buttonElement.disabled = false;
+        this.buttonElement.textContent = "Купить";
+      }
     }
-
-    private updateText(element: HTMLElement | null, value: string): void {
-        if (element) element.textContent = value;
-    }
-
-    private updateImage(element: HTMLImageElement | null, src: string, alt: string): void {
-        if (element) {
-            element.src = src;
-            element.alt = alt;
-        }
-    }
-
-    setData(data: IProduct): void {
-        this.productId = data.id;
-        this.updateImage(this.image, CDN_URL + data.image, data.title);
-        this.updateText(this.title, data.title);
-        this.updateText(this.description, data.description);
-        this.updateText(this.price, data.price ? `${data.price} синапсов` : 'Бесценно');
-
-        const categoryClass = categoryMap[data.category as keyof typeof categoryMap] || 'card__category_other';
-        if (this.category) {
-            this.category.className = `card__category ${categoryClass}`;
-            this.updateText(this.category, data.category);
-        }
-
-        if (this.button) {
-            if (data.price === null) {
-                this.button.disabled = true;
-                this.button.textContent = 'Недоступно';
-            } else {
-                this.button.disabled = false;
-                this.button.textContent = 'Купить';
-            }
-        }
-    }
-
-    setButtonState(inCart: boolean): void {
-        if (this.button && this.button.disabled === false) {
-            this.button.textContent = inCart ? 'Удалить из корзины' : 'Купить';
-        }
-    }
-
-    render(data?: IProduct): HTMLElement {
-        if (data) this.setData(data);
-        return this.container;
-    }
+    return this.container;
+  }
 }

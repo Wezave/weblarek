@@ -1,32 +1,17 @@
-import { Component } from '../base/Component';
-import { EventEmitter } from '../base/Events';
-import { IProduct } from '../../types';
-import { CatalogItem } from './CatalogItem';
+import { Component } from "../base/Component";
 
-export class CatalogView extends Component<{ items: IProduct[] }> {
-    protected container: HTMLElement;
-    protected cardTemplate: HTMLTemplateElement;
-    protected events: EventEmitter;
+export class CatalogView extends Component<{ items: HTMLElement[] }> {
+  constructor(container: HTMLElement) {
+    super(container);
+  }
 
-    constructor(container: HTMLElement, cardTemplate: HTMLTemplateElement, events: EventEmitter) {
-        super(container);
-        this.container = container;
-        this.cardTemplate = cardTemplate;
-        this.events = events;
-    }
+  setItems(items: HTMLElement[]): void {
+    this.container.innerHTML = "";
+    items.forEach((item) => this.container.appendChild(item));
+  }
 
-    render(data?: { items: IProduct[] }): HTMLElement {
-        if (!data || !data.items) return this.container;
-        this.container.innerHTML = '';
-        const template = this.cardTemplate.content.firstElementChild as HTMLElement;
-        if (!template) return this.container;
-
-        data.items.forEach(item => {
-            const cardElement = template.cloneNode(true) as HTMLElement;
-            const card = new CatalogItem(cardElement, this.events);
-            card.setData(item);
-            this.container.appendChild(card.render());
-        });
-        return this.container;
-    }
+  render(data?: { items: HTMLElement[] }): HTMLElement {
+    if (data) this.setItems(data.items);
+    return this.container;
+  }
 }
