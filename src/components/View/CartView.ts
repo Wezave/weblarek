@@ -1,88 +1,44 @@
 import { Component } from "../base/Component";
-import { EventEmitter } from "../base/Events";
-import { IProduct } from "../../types";
-import { CartItem } from "./CartItem";
+import { ensureElement } from "../../utils/utils";
 
-export class CartView extends Component<{ items: IProduct[]; total: number }> {
-  protected list: HTMLElement | null;
-  protected priceElement: HTMLElement | null;
-  protected button: HTMLButtonElement | null;
-  protected events: EventEmitter;
-  protected itemTemplate: HTMLTemplateElement;
-  protected itemsMap: Map<string, CartItem> = new Map();
+export class CartView extends Component<{
+  items: HTMLElement[];
+  total: number;
+}> {
+  private list: HTMLElement;
+  private priceElement: HTMLElement;
+  private button: HTMLButtonElement;
 
-  constructor(
-    template: HTMLTemplateElement,
-    itemTemplate: HTMLTemplateElement,
-    events: EventEmitter,
-  ) {
-    const container = template.content.firstElementChild as HTMLElement;
-    if (!container) throw new Error("CartView: template has no content");
+  constructor(container: HTMLElement) {
     super(container);
-    this.events = events;
-    this.itemTemplate = itemTemplate;
-
-    this.list = this.container.querySelector(".basket__list");
-    this.priceElement = this.container.querySelector(".basket__price");
-    this.button = this.container.querySelector(".basket__button");
-
-    if (this.button) {
-      this.button.addEventListener("click", () => {
-        this.events.emit("order:start");
-      });
-    }
+    this.list = ensureElement(".basket__list", container);
+    this.priceElement = ensureElement(".basket__price", container);
+    this.button = ensureElement<HTMLButtonElement>(
+      ".basket__button",
+      container,
+    );
+    this.button.addEventListener("click", () => {});
   }
 
-  private updateText(element: HTMLElement | null, value: string): void {
-    if (element) element.textContent = value;
+  setItems(items: HTMLElement[]) {
+    this.list.innerHTML = "";
+    items.forEach((item) => this.list.appendChild(item));
   }
 
-  render(data?: Partial<{ items: IProduct[]; total: number }>): HTMLElement {
-    if (!data || !data.items || data.total === undefined) {
-      return this.container;
+  setTotal(total: number) {
+    this.priceElement.textContent = `${total} синапсов`;
+  }
+
+  setButtonEnabled(enabled: boolean) {
+    this.button.disabled = !enabled;
+  }
+
+  render(data?: { items: HTMLElement[]; total: number }): HTMLElement {
+    if (data) {
+      this.setItems(data.items);
+      this.setTotal(data.total);
+      this.setButtonEnabled(data.items.length > 0);
     }
-
-    if (this.list) this.list.innerHTML = "";
-    this.itemsMap.clear();
-
-    if (data.items.length === 0) {
-      const emptyMessage = document.createElement("p");
-      emptyMessage.className = "basket__empty";
-      emptyMessage.textContent = "Корзина пуста";
-      if (this.list) this.list.appendChild(emptyMessage);
-    } else {
-      const itemTemplateElement = this.itemTemplate.content.firstElementChild;
-      if (
-        !itemTemplateElement ||
-        !(itemTemplateElement instanceof HTMLElement)
-      ) {
-        return this.container;
-      }
-
-      data.items.forEach((item, index) => {
-        const clone = itemTemplateElement.cloneNode(true) as HTMLElement;
-        const cartItem = new CartItem(clone, this.events);
-        cartItem.render({ item, index: index + 1 });
-        if (this.list) this.list.appendChild(cartItem.render());
-        this.itemsMap.set(item.id, cartItem);
-      });
-    }
-
-    if (this.priceElement) {
-      this.updateText(this.priceElement, `${data.total} синапсов`);
-    }
-
-    if (this.button) {
-      this.button.disabled = data.items.length === 0;
-    }
-
     return this.container;
-  }
-
-  clear(): void {
-    if (this.list) this.list.innerHTML = "";
-    this.itemsMap.clear();
-    if (this.priceElement) this.updateText(this.priceElement, "0 синапсов");
-    if (this.button) this.button.disabled = true;
   }
 }

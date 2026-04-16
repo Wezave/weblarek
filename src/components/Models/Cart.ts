@@ -23,9 +23,7 @@ export class Cart {
   removeItem(productId: string): void {
     const wasPresent = this.isInCart(productId);
     this.items = this.items.filter((item) => item.id !== productId);
-    if (wasPresent) {
-      this.events.emit("cart:changed");
-    }
+    if (wasPresent) this.events.emit("cart:changed");
   }
 
   clear(): void {

@@ -1,4 +1,3 @@
-// src/components/Models/Catalog.ts
 import { IProduct } from "../../types";
 import { EventEmitter } from "../base/Events";
 
@@ -21,7 +20,7 @@ export class Catalog {
   }
 
   getProductById(id: string): IProduct | undefined {
-    return this.products.find((product) => product.id === id);
+    return this.products.find((p) => p.id === id);
   }
 
   setSelectedProduct(product: IProduct): void {

@@ -1,94 +1,48 @@
-import { Component } from "../base/Component";
-import { EventEmitter } from "../base/Events";
+import { Card } from "./Card";
 import { IProduct } from "../../types";
-import { categoryMap } from "../../utils/constants";
-import { CDN_URL } from '../../utils/constants';
+import { ensureElement } from "../../utils/utils";
 
-export class ProductPreview extends Component<IProduct> {
-  protected image: HTMLImageElement | null;
-  protected category: HTMLElement | null;
-  protected title: HTMLElement | null;
-  protected description: HTMLElement | null;
-  protected price: HTMLElement | null;
-  protected button: HTMLButtonElement | null;
-  protected events: EventEmitter;
-  protected productId: string = "";
+interface ProductPreviewActions {
+  onToggle: (id: string) => void;
+}
 
-  constructor(container: HTMLElement, events: EventEmitter) {
+export class ProductPreview extends Card {
+  private descriptionElement: HTMLElement;
+  private button: HTMLButtonElement;
+
+  constructor(
+    container: HTMLElement,
+    private actions: ProductPreviewActions,
+  ) {
     super(container);
-    this.events = events;
-
-    this.image = this.container.querySelector(".card__image");
-    this.category = this.container.querySelector(".card__category");
-    this.title = this.container.querySelector(".card__title");
-    this.description = this.container.querySelector(".card__text");
-    this.price = this.container.querySelector(".card__price");
-    this.button = this.container.querySelector(".card__button");
-
-    if (this.button) {
-      this.button.addEventListener("click", () => {
-        this.events.emit("cart:toggle", { id: this.productId });
-      });
-    }
+    this.descriptionElement = ensureElement(".card__text", container);
+    this.button = ensureElement<HTMLButtonElement>(".card__button", container);
+    this.button.addEventListener("click", () => {
+      const id = this.container.dataset.id;
+      if (id) this.actions.onToggle(id);
+    });
   }
 
-  private updateText(element: HTMLElement | null, value: string): void {
-    if (element) element.textContent = value;
+  setDescription(value: string) {
+    this.descriptionElement.textContent = value;
   }
 
-  private updateImage(
-    element: HTMLImageElement | null,
-    src: string,
-    alt: string,
-  ): void {
-    if (element) {
-      element.src = src;
-      element.alt = alt;
-    }
+  setButtonText(text: string) {
+    this.button.textContent = text;
   }
 
-  setData(data: IProduct): void {
-    this.productId = data.id;
-    this.updateImage(this.image, CDN_URL + data.image, data.title);
-    this.updateText(this.title, data.title);
-    this.updateText(this.description, data.description);
-    this.updateText(
-      this.price,
-      data.price ? `${data.price} синапсов` : "Бесценно",
-    );
-
-    const categoryClass =
-      categoryMap[data.category as keyof typeof categoryMap] ||
-      "card__category_other";
-    if (this.category) {
-      this.category.className = `card__category ${categoryClass}`;
-      this.updateText(this.category, data.category);
-    }
-
-    if (this.button) {
-      if (data.price === null) {
-        this.button.disabled = true;
-        this.button.textContent = "Недоступно";
-      } else {
-        this.button.disabled = false;
-        this.button.textContent = "Купить";
-      }
-    }
-  }
-
-  setButtonState(inCart: boolean): void {
-    if (this.button && this.button.disabled === false) {
-      if (inCart) {
-        this.button.textContent = "Удалить из корзины";
-      } else {
-        this.button.textContent = "Купить";
-      }
-    }
+  setButtonEnabled(enabled: boolean) {
+    this.button.disabled = !enabled;
   }
 
   render(data?: IProduct): HTMLElement {
     if (data) {
-      this.setData(data);
+      this.container.dataset.id = data.id;
+      this.setTitle(data.title);
+      this.setPrice(data.price);
+      this.setCardImage(data.image);
+      this.setCategory(data.category);
+      this.setDescription(data.description);
     }
     return this.container;
   }

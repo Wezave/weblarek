@@ -1,42 +1,32 @@
-// src/components/view/SuccessView.ts
 import { Component } from "../base/Component";
 import { EventEmitter } from "../base/Events";
+import { ensureElement } from "../../utils/utils";
 
 export class SuccessView extends Component<{ total: number }> {
-  protected description: HTMLElement;
-  protected button: HTMLButtonElement;
-  protected events: EventEmitter;
+  private description: HTMLElement;
+  private button: HTMLButtonElement;
 
-  constructor(container: HTMLElement, events: EventEmitter) {
+  constructor(
+    container: HTMLElement,
+    private events: EventEmitter,
+  ) {
     super(container);
-    this.events = events;
-
-    this.description = this.container.querySelector(
-      ".order-success__description",
-    ) as HTMLElement;
-    this.button = this.container.querySelector(
+    this.description = ensureElement(".order-success__description", container);
+    this.button = ensureElement<HTMLButtonElement>(
       ".order-success__close",
-    ) as HTMLButtonElement;
-
-    this.button.addEventListener("click", () => {
-      this.events.emit("success:close");
-    });
+      container,
+    );
+    this.button.addEventListener("click", () =>
+      this.events.emit("success:close"),
+    );
   }
 
-  private updateText(element: HTMLElement, value: string): void {
-    if (element) {
-      element.textContent = value;
-    }
-  }
-
-  setTotal(total: number): void {
-    this.updateText(this.description, `Списано ${total} синапсов`);
+  setTotal(total: number) {
+    this.description.textContent = `Списано ${total} синапсов`;
   }
 
   render(data?: { total: number }): HTMLElement {
-    if (data) {
-      this.setTotal(data.total);
-    }
+    if (data) this.setTotal(data.total);
     return this.container;
   }
 }
