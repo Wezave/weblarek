@@ -16,11 +16,7 @@ export class Cart {
   addItem(product: IProduct): void {
     if (!this.isInCart(product.id)) {
       this.items.push(product);
-      this.events.emit("cart:changed", {
-        items: this.items,
-        total: this.getTotal(),
-        count: this.getCount(),
-      });
+      this.events.emit("cart:changed");
     }
   }
 
@@ -28,27 +24,17 @@ export class Cart {
     const wasPresent = this.isInCart(productId);
     this.items = this.items.filter((item) => item.id !== productId);
     if (wasPresent) {
-      this.events.emit("cart:changed", {
-        items: this.items,
-        total: this.getTotal(),
-        count: this.getCount(),
-      });
+      this.events.emit("cart:changed");
     }
   }
 
   clear(): void {
     this.items = [];
-    this.events.emit("cart:changed", {
-      items: this.items,
-      total: this.getTotal(),
-      count: this.getCount(),
-    });
+    this.events.emit("cart:changed");
   }
 
   getTotal(): number {
-    return this.items.reduce((sum, item) => {
-      return sum + (item.price ?? 0);
-    }, 0);
+    return this.items.reduce((sum, item) => sum + (item.price ?? 0), 0);
   }
 
   getCount(): number {

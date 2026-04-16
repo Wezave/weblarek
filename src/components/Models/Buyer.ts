@@ -35,13 +35,12 @@ export class Buyer {
 
     if (changed) {
       this.events.emit("buyer:changed", this.getData());
-      this.events.emit("buyer:validation-changed", this.validate());
     }
   }
 
   getData(): IBuyer {
     return {
-      payment: this.payment as TPayment,
+      payment: this.payment,
       email: this.email,
       phone: this.phone,
       address: this.address,
@@ -54,7 +53,6 @@ export class Buyer {
     this.phone = "";
     this.address = "";
     this.events.emit("buyer:changed", this.getData());
-    this.events.emit("buyer:validation-changed", this.validate());
   }
 
   validate(): IBuyerValidate {

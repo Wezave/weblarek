@@ -1,3 +1,4 @@
+// src/components/Models/Catalog.ts
 import { IProduct } from "../../types";
 import { EventEmitter } from "../base/Events";
 
@@ -12,7 +13,7 @@ export class Catalog {
 
   setProducts(products: IProduct[]): void {
     this.products = products;
-    this.events.emit("catalog:changed", { products: this.products });
+    this.events.emit("catalog:changed");
   }
 
   getProducts(): IProduct[] {
@@ -25,9 +26,7 @@ export class Catalog {
 
   setSelectedProduct(product: IProduct): void {
     this.selectedProduct = product;
-    this.events.emit("catalog:selected-changed", {
-      selectedProduct: this.selectedProduct,
-    });
+    this.events.emit("catalog:selected-changed");
   }
 
   getSelectedProduct(): IProduct | null {
