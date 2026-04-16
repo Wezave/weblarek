@@ -1,44 +1,42 @@
-import { Component } from "../base/Component";
-import { ensureElement } from "../../utils/utils";
+import { Component } from '../base/Component';
+import { EventEmitter } from '../base/Events';
+import { IProduct } from '../../types';
+import { CartItem } from './CartItem';
 
-export class CartView extends Component<{
-  items: HTMLElement[];
-  total: number;
-}> {
-  private list: HTMLElement;
-  private priceElement: HTMLElement;
-  private button: HTMLButtonElement;
+export class CartView extends Component<{ items: IProduct[]; total: number }> {
+    protected list: HTMLElement;
+    protected priceElement: HTMLElement;
+    protected button: HTMLButtonElement;
+    protected events: EventEmitter;
+    protected itemTemplate: HTMLTemplateElement;
 
-  constructor(container: HTMLElement) {
-    super(container);
-    this.list = ensureElement(".basket__list", container);
-    this.priceElement = ensureElement(".basket__price", container);
-    this.button = ensureElement<HTMLButtonElement>(
-      ".basket__button",
-      container,
-    );
-    this.button.addEventListener("click", () => {});
-  }
+    constructor(template: HTMLTemplateElement, itemTemplate: HTMLTemplateElement, events: EventEmitter) {
+        super(template.content.firstElementChild as HTMLElement);
+        this.events = events;
+        this.itemTemplate = itemTemplate;
+        this.list = this.container.querySelector('.basket__list') as HTMLElement;
+        this.priceElement = this.container.querySelector('.basket__price') as HTMLElement;
+        this.button = this.container.querySelector('.basket__button') as HTMLButtonElement;
 
-  setItems(items: HTMLElement[]) {
-    this.list.innerHTML = "";
-    items.forEach((item) => this.list.appendChild(item));
-  }
-
-  setTotal(total: number) {
-    this.priceElement.textContent = `${total} синапсов`;
-  }
-
-  setButtonEnabled(enabled: boolean) {
-    this.button.disabled = !enabled;
-  }
-
-  render(data?: { items: HTMLElement[]; total: number }): HTMLElement {
-    if (data) {
-      this.setItems(data.items);
-      this.setTotal(data.total);
-      this.setButtonEnabled(data.items.length > 0);
+        if (this.button) {
+            this.button.addEventListener('click', () => this.events.emit('order:start'));
+        }
     }
-    return this.container;
-  }
+
+    render(data?: { items: IProduct[]; total: number }): HTMLElement {
+        if (!data) return this.container;
+        this.list.innerHTML = '';
+        const itemTemplate = this.itemTemplate.content.firstElementChild as HTMLElement;
+
+        data.items.forEach((item, idx) => {
+            const clone = itemTemplate.cloneNode(true) as HTMLElement;
+            const cartItem = new CartItem(clone, this.events);
+            cartItem.setData(item, idx + 1);
+            this.list.appendChild(cartItem.render());
+        });
+
+        this.priceElement.textContent = `${data.total} синапсов`;
+        this.button.disabled = data.items.length === 0;
+        return this.container;
+    }
 }

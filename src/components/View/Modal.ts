@@ -1,35 +1,40 @@
-import { Component } from "../base/Component";
-import { ensureElement } from "../../utils/utils";
+import { Component } from '../base/Component';
+import { EventEmitter } from '../base/Events';
 
 export class Modal extends Component<{}> {
-  private content: HTMLElement;
-  private closeButton: HTMLElement;
+    protected content: HTMLElement;
+    protected closeButton: HTMLElement;
+    protected events: EventEmitter;
 
-  constructor(container: HTMLElement) {
-    super(container);
-    this.content = ensureElement(".modal__content", container);
-    this.closeButton = ensureElement(".modal__close", container);
-    this.closeButton.addEventListener("click", () => this.close());
-    this.container.addEventListener("click", (e) => {
-      if (e.target === this.container) this.close();
-    });
-  }
+    constructor(container: HTMLElement, events: EventEmitter) {
+        super(container);
+        this.events = events;
+        this.content = this.container.querySelector('.modal__content') as HTMLElement;
+        this.closeButton = this.container.querySelector('.modal__close') as HTMLElement;
 
-  open() {
-    this.container.classList.add("modal_active");
-  }
+        this.closeButton.addEventListener('click', () => this.close());
+        this.container.addEventListener('click', (e) => {
+            if (e.target === this.container) this.close();
+        });
+    }
 
-  close() {
-    this.container.classList.remove("modal_active");
-    this.content.innerHTML = "";
-  }
+    open(): void {
+        this.container.classList.add('modal_active');
+        this.events.emit('modal:open');
+    }
 
-  setContent(content: HTMLElement) {
-    this.content.innerHTML = "";
-    this.content.appendChild(content);
-  }
+    close(): void {
+        this.container.classList.remove('modal_active');
+        this.content.innerHTML = '';
+        this.events.emit('modal:close');
+    }
 
-  render(): HTMLElement {
-    return this.container;
-  }
+    setContent(content: HTMLElement): void {
+        this.content.innerHTML = '';
+        this.content.appendChild(content);
+    }
+
+    render(): HTMLElement {
+        return this.container;
+    }
 }

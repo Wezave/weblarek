@@ -1,9 +1,8 @@
 import { Component } from "../base/Component";
-import { IProduct } from "../../types";
-import { categoryMap, CDN_URL } from "../../utils/constants";
+import { CDN_URL, categoryMap } from "../../utils/constants";
 import { ensureElement } from "../../utils/utils";
 
-export abstract class Card extends Component<IProduct> {
+export abstract class Card<T> extends Component<T> {
   protected titleElement: HTMLElement;
   protected priceElement: HTMLElement;
   protected imageElement: HTMLImageElement;
